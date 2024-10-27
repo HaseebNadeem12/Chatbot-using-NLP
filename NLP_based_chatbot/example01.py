@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.model_selection import GridSearchCV
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Load the JSON data
 my_file = pd.read_json("C:/Users/COMTECH COMPUTER/Desktop/Datasets for Chatbot/intents.json")
@@ -77,13 +78,18 @@ TF_IDF = TfidfVectorizer(max_features=1000)
 X_features = TF_IDF.fit_transform(list_of_question).toarray()
 y_features = list_of_intents
 
-X_train,X_test,y_train,y_test = train_test_split(X_features,y_features,
-                                                 test_size=0.2,train_size=0.8, random_state=42)
-
-svm_model = SVC(kernel='linear', C=10)      # Achiveing high acuracy with linear and C=10
-svm_model.fit(X_train,y_train)
-predictions = svm_model.predict(X_test)
+# X_train,X_test,y_train,y_test = train_test_split(X_features,y_features,
+#                                                  test_size=0.2,train_size=0.8, random_state=42)
+#
+# svm_model = SVC(kernel='linear', C=10)      # Achiveing high acuracy with linear and C=10
+# svm_model.fit(X_train,y_train)
+# predictions = svm_model.predict(X_test)
 # print(X_test)
+
+#-> Training on complete data
+SVM_model = SVC(kernel='linear', C=10)
+SVM_model.fit(X_features, y_features)
+
 
 # #-> To find which combination work best
 # parameters = {'C': [0.1, 1, 10], 'kernel': ['linear', 'rbf']}
@@ -95,10 +101,9 @@ predictions = svm_model.predict(X_test)
 # # -> Predictions
 # print(y_test,'\n')
 # print(predictions)
-#
-# #-> Checking the model's accuracy
+
+#-> Checking the model's overall accuracy
 # accuracy = accuracy_score(y_test, predictions)
-# #-> Calculating the model's accuracy with the help of formula
 # print(f"Model Accuracy: {accuracy * 100:.2f}%",'\n')
 #
 # print(classification_report(y_test, predictions))
@@ -125,19 +130,23 @@ def sentiment_classifier(text):
     return result
 
 
-def custom_state_machine(intent, state, senti):
+def detect_intent(input_text, X_features):
+    input_vector = TF_IDF.transform([input_text]).toarray()
+    confidence_score = cosine_similarity(input_vector, X_features).max()
+    return confidence_score
+
+
+def custom_state_machine(intent, state, sentiment_score, similarity_score):
+
     if state == "greeting":
         print("Hi , I am your paramedic assistant")
         return "waiting_for_input"
 
-    elif state == "waiting_for_input" :
+    elif state == "waiting_for_input" and similarity_score >= 0.5:
 
-        if senti == -1:
+        if sentiment_score == -1:
             print("Don't be panic")
             print("Just follow the instruction ")
-
-        elif senti >= 0:
-            print("Thank you for staying calm. Here's the next step.")
 
         for i in range(len(list_of_intents)):
 
@@ -154,26 +163,32 @@ def custom_state_machine(intent, state, senti):
                     print("Thank you for using the chatbot. Goodbye!")
                     return "end"
 
+                else:
+                    print("You did not entered the correct input")
+                    print("I am considering that, You are trying to ask a Question")
+                    return "waiting_for_input"
 
-        else:
-            print("I did not understand you question, can you please repeat your question")
-            print("I can help with any medical emergency situation")
-            return "waiting_for_input"
+
+    elif similarity_score < 0.5:
+        print("I did not understand you question, can you please repeat your question")
+        print("I can help with any medical emergency situation")
+        return "waiting_for_input"
 
 
 current_state = 'greeting'
 # Looping through states based on user inputs
 while current_state != "end":
+
     if current_state == "greeting":
-        current_state = custom_state_machine(None, current_state, None)
-    else:
+        current_state = custom_state_machine(None, current_state, None, None)
+
+    elif current_state !="greeting" :
         user_input = input("Please type your question1: ")
         processed_input = preprocess_text(user_input)
-        intent = svm_model.predict(TF_IDF.transform([processed_input]).toarray())[0]
+        intent = SVM_model.predict(TF_IDF.transform([processed_input]).toarray())[0]
 
+        similarity_score = detect_intent(user_input,X_features)
         sentiment_result = sentiment_classifier(user_input)
-        print(current_state)
-        print(intent)
-        print(sentiment_result)
-        current_state = custom_state_machine(intent, current_state,sentiment_result)
+
+        current_state = custom_state_machine(intent, current_state,sentiment_result,similarity_score)
 
