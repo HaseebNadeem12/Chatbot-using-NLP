@@ -105,6 +105,8 @@ def detect_intent(input_text, X_features):
     confidence_score = cosine_similarity(input_vector, X_features).max()  # Max similarity score
     return confidence_score
 
+"""==============================================================================================================="""
+
 # State machine to manage dialogue flow and responses based on user input, intent, and sentiment
 def custom_state_machine(intent, state, sentiment_score, similarity_score):
 
@@ -157,20 +159,18 @@ def custom_state_machine(intent, state, sentiment_score, similarity_score):
 # Initialize dialogue state and enter conversation loop
 current_state = 'greeting'
 
+# Looping through states based on user inputs
 while current_state != "end":
 
     if current_state == "greeting":
-        # Initial greeting state
         current_state = custom_state_machine(None, current_state, None, None)
 
-    else:
-        # Capture user input and determine intent, sentiment, and similarity
-        user_input = input("Please type your question: ")
+    elif current_state !="greeting" :
+        user_input = input("Please type your question1: ")
         processed_input = preprocess_text(user_input)
         intent = SVM_model.predict(TF_IDF.transform([processed_input]).toarray())[0]
 
-        similarity_score = detect_intent(user_input, X_features)
+        similarity_score = detect_intent(user_input,X_features)
         sentiment_result = sentiment_classifier(user_input)
 
-        # Determine next state based on detected intent, sentiment, and similarity score
-        current_state = custom_state_machine(intent, current_state, sentiment_result, similarity_score)
+        current_state = custom_state_machine(intent, current_state,sentiment_result,similarity_score)

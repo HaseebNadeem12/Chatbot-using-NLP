@@ -152,6 +152,7 @@ def custom_state_machine(intent, state, sentiment_score, similarity_score):
 
             if intent == preprocess_text(my_file['intents'][i]['tag']):
                 print(my_file['intents'][i]['responses'][0])
+                print(type(my_file['intents'][i]['responses'][0]))
 
                 print("\nWould you like more information on something else?")
                 user_input = input("Enter Yes or No: ")
